@@ -1,4 +1,21 @@
 ##Consider the target variable as CustServ.Calls
+######### Steps for generating the model ######
+# 1. Data set loading
+# 2. Data Transformation
+# 3. Null Imputation
+# 4. Outlier removals
+# 5. Scalling
+# 6. Correlation
+# 7. EDA
+# 8. Sampling
+# 9. Modeling
+# 10. Evaluation (Testing) / Post diagnostics
+# 
+
+
+
+## Step 1: DataSet loading
+
 getwd()
 churn_mv=read.csv("churn_MV.csv")
 
@@ -39,12 +56,12 @@ numCols=setdiff(names,charCols)
 numCols
 
 
-## data tranformation
+## step 2:- data tranformation
 
 churn_mv[,charCols]=lapply(churn_mv[,charCols], funColToFactos)
 str(churn_mv)
 
-## null values imputation
+## step 3:- null values imputation
 
 ## remove the null values if it has on the target variable
 churn_mv=churn_mv[!is.na(churn_mv$CustServ.Calls),]
@@ -69,7 +86,7 @@ churn_mv$Daily.Charges.MV=NULL
 numCols= numCols[!(numCols %in% "Daily.Charges.MV")]
 
 
-## Replacing outlier values with the whisker values
+## Step 4:- Replacing outlier values with the whisker values
 boxplot(churn_mv$Eve.Mins)
 churn_mv[,numCols]=lapply(churn_mv[,numCols], outlierRemoval)
 
@@ -77,7 +94,7 @@ churn_mv[,numCols]=lapply(churn_mv[,numCols], outlierRemoval)
 churn_num=churn_mv[,numCols]
 churn_cat=churn_mv[,charCols]
 
-## Scalling ###
+## Step 5:- Scalling ###
 
 ## MinmaxScalling ##
 ## we need to scale the data set excluding the target variable
@@ -91,7 +108,7 @@ zscoreData=as.data.frame(scale(churn_num[,-7]))
 zscoreData$CustServ.Calls=churn_num$CustServ.Calls
 zscoreBind=cbind(zscoreData,churn_cat)
 
-## correlation between two columns ##
+## Step6:- correlation between two columns ##
 ## if the columns are strongly correlated we can elimnate one coulumn by applying EDA with target dataset
 
 ## 1. Correlation between continous variable
@@ -125,13 +142,123 @@ chisq.test(table(churn_cat$Intl.Plan,churn_cat$VMail.Plan)) ## p= 0.7785 ## both
 
 ## 3. correlation between one continous and one categorical variable
 # we use anova for finding the correlation between one continous and once categorical
-
-summary(aov(minmaxBind$VMail.Message~minmaxBind$VMail.Plan))
-
-
-
+# H0 :- two categorical variables are independent from each other
+# HA :- two categorical variables are depedent from each other
+# if p<=0.05 reject H0, if p>0.05 accept H0
 
 
+summary(aov(minmaxBind$VMail.Message~minmaxBind$VMail.Plan)) # p=2e-16 # both are dependent
+summary(aov(minmaxBind$Account.Length~minmaxBind$VMail.Plan)) # p=0.836 # both are undependent
+# we need to apply for remaining columns as well
+
+## Remove the coloumns which are strongly correlated 
+
+minmaxBind$Day.Charge=NULL
+minmaxBind$Eve.Charge=NULL
+minmaxBind$Night.Charge=NULL
+minmaxBind$Intl.Charge=NULL
+minmaxBind$Churn=NULL
+minmaxBind$VMail.Message=NULL
+minmaxBind$Phone=NULL
+minmaxBind$Area.Code=NULL
+minmaxBind$State=NULL
+## Step 7:- EDA
+## we need to do the EDA for univeriant, bi-variant, multivariant analysis
+## we need to findout the inference and verify after the step 9
+boxplot(minmaxData$Account.Length)
+boxplot(minmaxBind$Intl.Plan,minmaxBind$CustServ.Calls)
+library(ggplot2)
+ggplot(minmaxBind,aes(x=Intl.Plan,y=CustServ.Calls))+geom_boxplot()
+
+
+## Step 8:- Sampling
+## generating train and test data for the linear regrassion model
+## Randome sampling
+set.seed(675) ## for generating the random data same for everytime
+randomIds = sample( nrow(minmaxBind), nrow(minmaxBind)*0.8)
+trainData = minmaxBind[randomIds,]
+testData = minmaxBind[-randomIds,]
+
+## stratified sampling
+install.packages("caTools")
+library(caTools)
+train_rows=sample.split(minmaxBind$CustServ.Calls,SplitRatio = 0.8)
+trainData=minmaxBind[train_rows,]
+testData=minmaxBind[!train_rows,]
+
+
+## Step 9:- Modeling 
+## linear regression model
+
+lin_model=lm(CustServ.Calls~.,data = trainData)
+summary(lin_model) 
+
+## Step 10:- Testing
+## Test the generated model 
+
+testData$predzsc = predict(lin_model, newdata=testData )
+
+## Find the RMSE for the predicted values
+
+testData$error = testData$CustServ.Calls - testData$predzsc
+testData$error_sq = testData$error ** 2
+rmse = sqrt(mean(testData$error_sq))
+rmse  ## RMSE = 1.087 with random sampling
+      ## RMSE = 1.106492 with stratified sampling
+
+## find the RMSE for z score scalling  and choose the best model
+
+zscoreBind$Day.Charge=NULL
+zscoreBind$Eve.Charge=NULL
+zscoreBind$Night.Charge=NULL
+zscoreBind$Intl.Charge=NULL
+zscoreBind$Churn=NULL
+zscoreBind$VMail.Message=NULL
+zscoreBind$Phone=NULL
+zscoreBind$Area.Code=NULL
+zscoreBind$State=NULL
+
+## Sampling with zscore dataframe
+## Random Sampling
+set.seed(674) ## for generating the random data same for everytime
+randomIds = sample( nrow(zscoreBind), nrow(zscoreBind)*0.8)
+trainData = zscoreBind[randomIds,]
+testData = zscoreBind[-randomIds,]
+
+## stratified sampling
+train_rows=sample.split(zscoreBind$CustServ.Calls,SplitRatio = 0.8)
+trainData=zscoreBind[train_rows,]
+testData=zscoreBind[!train_rows,]
+
+
+## linear regression on zscore dataframe
+
+lin_model=lm(CustServ.Calls~.,data = trainData)
+summary(lin_model) 
+
+##
+## Test the generated model with zscore
+
+testData$predzsc = predict(lin_model, newdata=testData )
+
+## Find the RMSE for the predicted values of zscore
+
+testData$error = testData$CustServ.Calls - testData$predzsc
+testData$error_sq = testData$error ** 2
+rmse = sqrt(mean(testData$error_sq))
+rmse  # RMSE= 1.1529 with random sampling 
+      # RMSE= 1.113193 with stratified sampling
+
+## by observing the values of RMSE for minmaxscalling and zscore scalling with random and stratified sampling method below are the observations
+
+## RMSE = 1.087 random sampling with minmax scalling
+## RMSE = 1.106492 stratified sampling with minmax scalling
+## RMSE= 1.1529 random sampling with zscore
+## RMSE= 1.113193 stratified sampling with zscore
+
+###### Observations #######
+# Minmax scalling is giving better results then zscore
+# some cases randome sampling is giving better some cases stratified sampling giving better results
 
 
 
