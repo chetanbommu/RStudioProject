@@ -174,10 +174,12 @@ ggplot(minmaxBind,aes(x=Intl.Plan,y=CustServ.Calls))+geom_boxplot()
 ## Step 8:- Sampling
 ## generating train and test data for the linear regrassion model
 ## Randome sampling
+
 set.seed(675) ## for generating the random data same for everytime
 randomIds = sample( nrow(minmaxBind), nrow(minmaxBind)*0.8)
 trainData = minmaxBind[randomIds,]
 testData = minmaxBind[-randomIds,]
+
 
 ## stratified sampling
 install.packages("caTools")
@@ -195,6 +197,7 @@ summary(lin_model)
 
 ## Step 10:- Testing
 ## Test the generated model 
+
 
 testData$predzsc = predict(lin_model, newdata=testData )
 
