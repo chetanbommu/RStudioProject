@@ -173,11 +173,19 @@ ggplot(minmaxBind,aes(x=Intl.Plan,y=CustServ.Calls))+geom_boxplot()
 
 ## Step 8:- Sampling
 ## generating train and test data for the linear regrassion model
-
+## Randome sampling
 set.seed(675) ## for generating the random data same for everytime
 randomIds = sample( nrow(minmaxBind), nrow(minmaxBind)*0.8)
 trainData = minmaxBind[randomIds,]
 testData = minmaxBind[-randomIds,]
+
+## stratified sampling
+install.packages("caTools")
+library(caTools)
+train_rows=sample.split(minmaxBind$CustServ.Calls,SplitRatio = 0.8)
+trainData=minmaxBind[train_rows,]
+testData=minmaxBind[!train_rows,]
+
 
 ## Step 9:- Modeling 
 ## linear regression model
@@ -190,15 +198,68 @@ summary(lin_model)
 
 testData$predzsc = predict(lin_model, newdata=testData )
 
+
 ## Find the RMSE for the predicted values
 
 testData$error = testData$CustServ.Calls - testData$predzsc
 testData$error_sq = testData$error ** 2
 rmse = sqrt(mean(testData$error_sq))
-rmse
+rmse  ## RMSE = 1.087 with random sampling
+      ## RMSE = 1.106492 with stratified sampling
+
+## find the RMSE for z score scalling  and choose the best model
+
+zscoreBind$Day.Charge=NULL
+zscoreBind$Eve.Charge=NULL
+zscoreBind$Night.Charge=NULL
+zscoreBind$Intl.Charge=NULL
+zscoreBind$Churn=NULL
+zscoreBind$VMail.Message=NULL
+zscoreBind$Phone=NULL
+zscoreBind$Area.Code=NULL
+zscoreBind$State=NULL
+
+## Sampling with zscore dataframe
+## Random Sampling
+set.seed(674) ## for generating the random data same for everytime
+randomIds = sample( nrow(zscoreBind), nrow(zscoreBind)*0.8)
+trainData = zscoreBind[randomIds,]
+testData = zscoreBind[-randomIds,]
+
+## stratified sampling
+train_rows=sample.split(zscoreBind$CustServ.Calls,SplitRatio = 0.8)
+trainData=zscoreBind[train_rows,]
+testData=zscoreBind[!train_rows,]
 
 
+## linear regression on zscore dataframe
 
+lin_model=lm(CustServ.Calls~.,data = trainData)
+summary(lin_model) 
+
+##
+## Test the generated model with zscore
+
+testData$predzsc = predict(lin_model, newdata=testData )
+
+## Find the RMSE for the predicted values of zscore
+
+testData$error = testData$CustServ.Calls - testData$predzsc
+testData$error_sq = testData$error ** 2
+rmse = sqrt(mean(testData$error_sq))
+rmse  # RMSE= 1.1529 with random sampling 
+      # RMSE= 1.113193 with stratified sampling
+
+## by observing the values of RMSE for minmaxscalling and zscore scalling with random and stratified sampling method below are the observations
+
+## RMSE = 1.087 random sampling with minmax scalling
+## RMSE = 1.106492 stratified sampling with minmax scalling
+## RMSE= 1.1529 random sampling with zscore
+## RMSE= 1.113193 stratified sampling with zscore
+
+###### Observations #######
+# Minmax scalling is giving better results then zscore
+# some cases randome sampling is giving better some cases stratified sampling giving better results
 
 
 
