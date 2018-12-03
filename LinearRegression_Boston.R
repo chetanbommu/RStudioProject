@@ -126,7 +126,7 @@ testData = Boston[-trainRows,]
 
 ## Final model
 
-finalModel = lm(medv_sqrt ~ .-medv-indus-age-lstat , data=trainData)
+finalModel = lm(medv_sqrt~lstat+black , data=trainData)
 summary(finalModel)
 
 ### Preds
@@ -135,5 +135,5 @@ preds = preds**2
 
 ### RMSE
 sqrt(mean((testData$medv - preds)**2))
-step()
+
 
