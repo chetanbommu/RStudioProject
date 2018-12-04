@@ -55,6 +55,8 @@ test_data = Boston[test_rows,]
 mod1 = lm(medv~lstat,data=train_data)
 mod1 = lm(medv_sqrt~lstat,data=train_data)
 plot(train_data$lstat,train_data$medv)
+
+
 plot(train_data$lstat,train_data$medv_sqrt)
 summary(mod1)
 abline(mod1)
@@ -63,7 +65,8 @@ mod2 = lm(medv_sqrt~lstat,data=train_data)
 summary(mod2)
 abline(mod2)
 
-plot(mod2)
+plot(mod1)
+
 
 hist(train_data$lstat)
 hist(sqrt(train_data$lstat))
